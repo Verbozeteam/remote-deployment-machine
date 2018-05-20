@@ -2,7 +2,7 @@
 from connection.communicator import Communicator
 from deployment.firmwares import FirmwaresManager
 from deployment.repositories import RepositoriesManager
-from deployment.disks import DisksManager
+from deployment.targets.targets_manager import TargetsManager
 
 class Core:
     def __init__(self):
@@ -13,8 +13,8 @@ class Core:
         self.firmwares = FirmwaresManager(self.comm)
         self.firmwares.start()
 
-        self.disks = DisksManager(self.comm)
-        self.disks.start()
+        self.targets = TargetsManager(self.comm)
+        self.targets.start()
 
         self.comm.run()
 
