@@ -1,6 +1,6 @@
 import os
 
-from config.config import Config
+from config.config import CONFIG
 
 class RepositoriesManager:
     def __init__(self, communicator):
@@ -10,7 +10,7 @@ class RepositoriesManager:
 
         self.directory = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            Config.REPOS_DIR)
+            CONFIG.REPOS_DIR)
         os.makedirs(self.directory, exist_ok=True)
 
         print('RepositoriesManager initialized')

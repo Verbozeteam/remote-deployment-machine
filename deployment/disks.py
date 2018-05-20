@@ -6,7 +6,7 @@ from time import sleep
 import json
 import re
 
-from config.config import Config
+from config.config import CONFIG
 
 # TODO: Implement code to run on Windows and Linux as well - currently only Mac
 class DisksManager(threading.Thread):
@@ -27,7 +27,7 @@ class DisksManager(threading.Thread):
             self.communicator.websocket_send({'disks': disks})
             self.disks = disks
 
-        sleep(Config.DISKS_CHECK_INTERVAL)
+        sleep(CONFIG.DISKS_CHECK_INTERVAL)
         self.update_disks_list()
 
     @staticmethod

@@ -2,7 +2,7 @@ import threading, os, re
 import json
 from os import listdir
 
-from config.config import Config
+from config.config import CONFIG
 
 class DeploymentThread(threading.Thread):
     def __init__(self, deployment_lock, disk_path, firmware, config, dep,

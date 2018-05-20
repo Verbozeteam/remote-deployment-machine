@@ -6,7 +6,8 @@ import websocket
 import requests
 import json
 
-from config.config import Config
+from config.config import CONFIG
+from config.auth import AUTH_CONFIG
 
 class Communicator:
     def __init__(self, on_command):
@@ -23,20 +24,22 @@ class Communicator:
 
     def authenticate(self):
         auth_info = {
-            # 'username': input('Username: '),
-            # 'password': getpass.getpass('Password: '),
-            'username': 'mfituri',
-            'password': 'adminpass',
+            'username': AUTH_CONFIG.USERNAME,
+            'password': AUTH_CONFIG.PASSWORD,
             'machine': self.get_machine_info()
         }
+        if auth_info['username'] == '':
+            auth_info['username'] = input('Username: ')
+        if auth_info['password'] == '':
+            auth_info['password'] = getpass.getpass('Password: ')
 
         print('Authenticating...')
 
-        if Config.NOT_SECURE:
+        if CONFIG.NOT_SECURE:
             url = 'http://'
         else:
             url = 'https://'
-        url += Config.BASE_URL + '/api/token-auth/'
+        url += CONFIG.BASE_URL + '/api/token-auth/'
 
         r = requests.post(url, auth_info)
 
@@ -56,11 +59,11 @@ class Communicator:
         self.thread.start()
 
     def initialize_websocket(self):
-        if Config.NOT_SECURE:
+        if CONFIG.NOT_SECURE:
             url = 'ws://'
         else:
             url = 'wss://'
-        url += Config.BASE_URL + '/deployment-comm/' + self.token + '/'
+        url += CONFIG.BASE_URL + '/deployment-comm/' + self.token + '/'
 
         self.ws = websocket.WebSocketApp(url,
             on_message=self.websocket_message,

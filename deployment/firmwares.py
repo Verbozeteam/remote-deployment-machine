@@ -4,7 +4,7 @@ import threading
 from time import sleep
 import json
 
-from config.config import Config
+from config.config import CONFIG
 
 class FirmwaresManager(threading.Thread):
     def __init__(self, communicator):
@@ -15,7 +15,7 @@ class FirmwaresManager(threading.Thread):
 
         self.directory = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            Config.FIRMWARE_DIR)
+            CONFIG.FIRMWARE_DIR)
         os.makedirs(self.directory, exist_ok=True)
 
         print(self.directory)
@@ -32,7 +32,7 @@ class FirmwaresManager(threading.Thread):
             self.communicator.websocket_send({'firmwares': firmwares})
             self.firmwares = firmwares
 
-        sleep(Config.FIRMWARES_CHECK_INTERVAL)
+        sleep(CONFIG.FIRMWARES_CHECK_INTERVAL)
         self.update_firmwares_list()
 
     def Darwin_update_firmwares_list(self):

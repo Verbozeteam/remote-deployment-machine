@@ -1,4 +1,4 @@
-class Config:
+class CONFIG:
     BASE_URL = 'www.verboze.com'
     FIRMWARE_DIR = 'firmwares/'
     REPOS_DIR = 'repositories/'
