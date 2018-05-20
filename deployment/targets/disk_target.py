@@ -1,34 +1,14 @@
+from deployment.targets.deployment_target import DeploymentTarget
+
+import json
+import re
 import os
 import platform
 import subprocess
-import threading
-from time import sleep
-import json
-import re
 
-from config.config import CONFIG
-
-# TODO: Implement code to run on Windows and Linux as well - currently only Mac
-class DisksManager(threading.Thread):
-    def __init__(self, communicator):
-        threading.Thread.__init__(self)
-
-        self.disks = []
-        self.communicator = communicator
-        print('DisksManager initialized')
-
-    def run(self):
-        self.update_disks_list()
-
-    def update_disks_list(self):
-        disks = eval('self.' + platform.system() + '_update_disks_list()')
-
-        if json.dumps(disks) != json.dumps(self.disks):
-            self.communicator.websocket_send({'disks': disks})
-            self.disks = disks
-
-        sleep(CONFIG.DISKS_CHECK_INTERVAL)
-        self.update_disks_list()
+class DiskTarget(DeploymentTarget):
+    def __init__(self, manager, identifier):
+        super(DiskTarget, self).__init__(manager, identifier)
 
     @staticmethod
     def Darwin_disk_is_external(disk):
@@ -48,6 +28,7 @@ class DisksManager(threading.Thread):
 
         return out.decode().replace('Device / Media Name:      ', '').strip()
 
+    @staticmethod
     def Darwin_update_disks_list(self):
         unfiltered = os.listdir('/dev')
 
@@ -60,10 +41,16 @@ class DisksManager(threading.Thread):
 
         return disks
 
+    @staticmethod
     def Linux_update_disks_list(self):
         print('Disk listing not implemented for Linux')
         return []
 
+    @staticmethod
     def Windows_update_disks_list(self):
         print('Disk listing not implemented for Windows')
+        return []
+
+    @staticmethod
+    def list_all_target_identifiers():
         return []
