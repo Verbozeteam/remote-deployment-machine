@@ -18,7 +18,9 @@ class DisksManager(threading.Thread):
         print('DisksManager initialized')
 
     def run(self):
-        self.update_disks_list()
+        while (True):
+            self.update_disks_list()
+            sleep(CONFIG.DISKS_CHECK_INTERVAL)
 
     def update_disks_list(self):
         disks = eval('self.' + platform.system() + '_update_disks_list()')
@@ -26,9 +28,6 @@ class DisksManager(threading.Thread):
         if json.dumps(disks) != json.dumps(self.disks):
             self.communicator.websocket_send({'disks': disks})
             self.disks = disks
-
-        sleep(CONFIG.DISKS_CHECK_INTERVAL)
-        self.update_disks_list()
 
     @staticmethod
     def Darwin_disk_is_external(disk):

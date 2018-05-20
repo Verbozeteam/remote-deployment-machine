@@ -18,31 +18,16 @@ class FirmwaresManager(threading.Thread):
             CONFIG.FIRMWARE_DIR)
         os.makedirs(self.directory, exist_ok=True)
 
-        print(self.directory)
-
         print('FirmwaresManager initialized')
 
     def run(self):
-        self.update_firmwares_list()
+        while (True):
+            self.update_firmwares_list()
+            sleep(CONFIG.FIRMWARES_CHECK_INTERVAL)
 
     def update_firmwares_list(self):
-        firmwares = eval('self.' + platform.system() + '_update_firmwares_list()')
+        firmwares = [f for f in os.listdir(self.directory) if not f.startswith('.')]
 
         if json.dumps(firmwares) != json.dumps(self.firmwares):
             self.communicator.websocket_send({'firmwares': firmwares})
             self.firmwares = firmwares
-
-        sleep(CONFIG.FIRMWARES_CHECK_INTERVAL)
-        self.update_firmwares_list()
-
-    def Darwin_update_firmwares_list(self):
-
-        return []
-
-    def Linux_update_firmwares_list(self):
-        print('Firmwares listing not implemented for Linux')
-        return []
-
-    def Windows_update_firmwares_list(self):
-        print('Firmwares listing not implemented for Windows')
-        return []
