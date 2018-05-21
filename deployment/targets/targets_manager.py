@@ -8,7 +8,8 @@ from time import sleep
 # TODO: Implement code to run on Windows and Linux as well - currently only Mac
 class TargetsManager(threading.Thread):
     def __init__(self, communicator):
-        super(TargetsManager, self).__init__(self)
+        threading.Thread.__init__(self)
+
         self.target_types = [
             DiskTarget,
             WifiTarget,
@@ -44,4 +45,3 @@ class TargetsManager(threading.Thread):
                 self.communicator.websocket_send({'deployment_targets': map(lambda T: T.get_json_dump(), self.discovered_targets.values())})
 
             sleep(CONFIG.DISKS_CHECK_INTERVAL)
-

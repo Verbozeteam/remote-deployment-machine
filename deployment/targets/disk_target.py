@@ -1,3 +1,4 @@
+from config.config import CONFIG
 from deployment.targets.deployment_target import DeploymentTarget
 
 import json
@@ -10,12 +11,12 @@ class DiskTarget(DeploymentTarget):
     def __init__(self, manager, identifier):
         super(DiskTarget, self).__init__(manager, identifier)
 
-    @staticmethod
-    def list_all_target_identifiers():
-        return []
+    @classmethod
+    def list_all_target_identifiers(cls):
+        return eval('cls.' + CONFIG.OS + '_get_disks_list()')
 
     def get_json_dump(self):
-        return super(DiskTarget, self).get_json_dump())
+        return super(DiskTarget, self).get_json_dump()
 
     @staticmethod
     def Darwin_disk_is_external(disk):
@@ -35,25 +36,25 @@ class DiskTarget(DeploymentTarget):
 
         return out.decode().replace('Device / Media Name:      ', '').strip()
 
-    @staticmethod
-    def Darwin_update_disks_list(self):
+    @classmethod
+    def Darwin_get_disks_list(cls):
         unfiltered = os.listdir('/dev')
 
         r = re.compile(r'\Adisk\d+$')
         disks = []
         for disk in unfiltered:
-            if r.match(disk) and self.Darwin_disk_is_external(disk):
-                disks.append({'identifier': disk,
-                    'name': self.Darwin_get_disk_name(disk)})
+            if r.match(disk) and cls.Darwin_disk_is_external(disk):
+                disks.append(disk)
 
+        print('Available disks', disks)
         return disks
 
     @staticmethod
-    def Linux_update_disks_list(self):
+    def Linux_get_disks_list(self):
         print('Disk listing not implemented for Linux')
         return []
 
     @staticmethod
-    def Windows_update_disks_list(self):
+    def Windows_get_disks_list(self):
         print('Disk listing not implemented for Windows')
         return []
