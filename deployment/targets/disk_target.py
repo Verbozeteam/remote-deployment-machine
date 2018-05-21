@@ -14,7 +14,7 @@ class DiskTarget(DeploymentTarget):
     def deploy_impl(self, params):
         pass
 
-    @staticmethod
+    @classmethod
     def list_all_target_identifiers(cls):
         return eval('cls.' + CONFIG.OS + '_get_disks_list()')
 
