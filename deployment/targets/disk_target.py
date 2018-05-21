@@ -11,7 +11,10 @@ class DiskTarget(DeploymentTarget):
     def __init__(self, manager, identifier):
         super(DiskTarget, self).__init__(manager, identifier)
 
-    @classmethod
+    def deploy_impl(self, params):
+        pass
+
+    @staticmethod
     def list_all_target_identifiers(cls):
         return eval('cls.' + CONFIG.OS + '_get_disks_list()')
 
