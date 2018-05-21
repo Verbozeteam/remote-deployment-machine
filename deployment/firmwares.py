@@ -21,7 +21,7 @@ class FirmwaresManager(threading.Thread):
         print('FirmwaresManager initialized')
 
     def run(self):
-        while (True):
+        while True:
             self.update_firmwares_list()
             sleep(CONFIG.FIRMWARES_CHECK_INTERVAL)
 

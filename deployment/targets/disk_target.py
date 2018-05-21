@@ -8,8 +8,8 @@ import platform
 import subprocess
 
 class DiskTarget(DeploymentTarget):
-    def __init__(self, manager, identifier):
-        super(DiskTarget, self).__init__(manager, identifier)
+    def __init__(self, manager, identifier, communicator):
+        super(DiskTarget, self).__init__(manager, identifier, communicator)
 
     def deploy_impl(self, params):
         pass
@@ -43,13 +43,13 @@ class DiskTarget(DeploymentTarget):
     def Darwin_get_disks_list(cls):
         unfiltered = os.listdir('/dev')
 
+        # only keep files that match disk* and are external drives
         r = re.compile(r'\Adisk\d+$')
         disks = []
         for disk in unfiltered:
             if r.match(disk) and cls.Darwin_disk_is_external(disk):
                 disks.append(disk)
 
-        print('Available disks', disks)
         return disks
 
     @staticmethod

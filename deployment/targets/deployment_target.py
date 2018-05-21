@@ -7,12 +7,13 @@ class DeploymentTargetStatus:
     DESTROYED = 2
 
 class DeploymentTarget(object):
-    def __init__(self, manager, identifier):
+    def __init__(self, manager, identifier, communicator):
         self.manager = manager
         self.identifier = identifier
         self.status = DeploymentTargetStatus.READY
-        self.progress = DeploymentProgress()
+        self.progress = DeploymentProgress(self)
         self.thread = None
+        self.communicator = communicator
 
     def on_removed(self):
         self.status = DeploymentTargetStatus.DESTROYED
@@ -24,7 +25,7 @@ class DeploymentTarget(object):
         self.status = DeploymentTargetStatus.RUNNING
         self.progress.reset()
         self.thread = DeploymentThread(self, params)
-        self.thread.run()
+        self.thread.start()
         return True
 
     def deploy_impl(self, params):
@@ -33,8 +34,8 @@ class DeploymentTarget(object):
     def get_json_dump(self):
         return {
             "identifier": self.identifier,
-            "status": self.status,
-            "progress": self.progress.get_json_dump(),
+            # "status": self.status,
+            # "progress": self.progress.get_json_dump(),
         }
 
     @staticmethod

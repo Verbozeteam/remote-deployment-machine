@@ -18,14 +18,21 @@ class TargetsManager(threading.Thread):
         self.discovered_targets = {}
         self.last_sent_dump = []
         self.communicator = communicator
+        self.running_deployments = []
         print('TargetsManager initialized')
+
+    def deploy(self, identifier, parameters): # returns False if can't run
+        self.running_deployments.append(
+            DiskTarget(self, )
+        )
 
     def run(self):
         while True:
             current_all_targets = [] # list of (target_type, target_identifier)
             for target_type in self.target_types:
-                current_all_targets += map(lambda tid: (target_type, tid), target_type.list_all_target_identifiers())
-            current_all_targets_ids = map(lambda T, tid: tid, current_all_targets)
+                current_all_targets += list(map(lambda tid: (target_type, tid),
+                    target_type.list_all_target_identifiers()))
+            current_all_targets_ids = list(map(lambda T: T[1], current_all_targets))
 
             # check if any targets don't exist anymore
             for target in self.discovered_targets.keys():
@@ -38,10 +45,11 @@ class TargetsManager(threading.Thread):
             for (target_type, tid) in current_all_targets:
                 if tid not in self.discovered_targets:
                     # new target has been discovered
-                    self.discovered_targets[tid] = target_type(self, tid) # instanciate a new target
+                    self.discovered_targets[tid] = target_type(self, tid, self.communicator) # instanciate a new target
 
-            dump = map(lambda T: T.get_json_dump(), self.discovered_targets.values())
+            dump = list(map(lambda T: T.get_json_dump(), self.discovered_targets.values()))
             if json.dumps(self.last_sent_dump) != json.dumps(dump):
+                print('Available deployment targets', dump)
                 self.communicator.websocket_send({'deployment_targets': dump})
                 self.last_sent_dump = dump
 
