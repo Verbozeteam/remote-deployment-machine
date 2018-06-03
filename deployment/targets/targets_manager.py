@@ -21,10 +21,17 @@ class TargetsManager(threading.Thread):
         self.running_deployments = []
         print('TargetsManager initialized')
 
-    def deploy(self, identifier, parameters): # returns False if can't run
-        self.running_deployments.append(
-            DiskTarget(self, )
-        )
+    def deploy(self, params): # returns False if can't run
+        print('TargetsManager deploy()')
+
+        deployment_target = params['deployment_target']['identifier']
+
+        if self.discovered_targets[deployment_target].deploy(params):
+            self.running_deployments.append({
+                id: params['deployment_lock']['deployment']['id'],
+                deployment_target: deployment_target})
+        else:
+            print('Running deployment for target', deployment_target, 'failed...')
 
     def run(self):
         while True:
@@ -33,6 +40,10 @@ class TargetsManager(threading.Thread):
                 current_all_targets += list(map(lambda tid: (target_type, tid),
                     target_type.list_all_target_identifiers()))
             current_all_targets_ids = list(map(lambda T: T[1], current_all_targets))
+
+
+            # FIXME: RuntimeError: dictionary changed size during iteration
+            # FIXME: This happens when SD card is removed
 
             # check if any targets don't exist anymore
             for target in self.discovered_targets.keys():

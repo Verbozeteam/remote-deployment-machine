@@ -27,6 +27,7 @@ class FirmwaresManager(threading.Thread):
 
     def update_firmwares_list(self):
         firmwares = [f for f in os.listdir(self.directory) if not f.startswith('.')]
+        firmwares = list(map(lambda f: {'name': f}, firmwares))
 
         if json.dumps(firmwares) != json.dumps(self.firmwares):
             self.communicator.websocket_send({'firmwares': firmwares})

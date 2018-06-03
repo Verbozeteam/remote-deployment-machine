@@ -24,6 +24,5 @@ class Core:
         if 'repos' in message:
             self.repositories.update_repositories_list(message['repos'])
 
-        # if 'deploy' in message:
-            # self.targets.deploy(message['deploy']['identifier'],
-                # message['deploy']['params'])
+        if 'deploy' in message:
+            self.targets.deploy(message['deploy'])
