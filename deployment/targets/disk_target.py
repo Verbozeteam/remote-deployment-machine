@@ -34,7 +34,9 @@ class WriteFileCommand(Command):
         self.content = content
 
     def run(self, progress):
-        pass
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        with open(self.path, 'wb') as F:
+            F.write(self.content.encode('utf-8'))
 
 class MessageCommand(Command):
     def __init__(self, message):
@@ -46,6 +48,8 @@ class MessageCommand(Command):
 class DiskTarget(DeploymentTarget):
     def __init__(self, manager, identifier, communicator):
         super(DiskTarget, self).__init__(manager, identifier, communicator)
+
+        os.makedirs(CONFIG.MOUNTING_DIR, exist_ok=True)
 
         print('DiskTarget initialized')
         self.command_queue = []
@@ -61,11 +65,13 @@ class DiskTarget(DeploymentTarget):
         self.reset_commands()
 
         identifier = params['deployment_target']['identifier']
-        self.unmount_disk(identifier)
+        # self.unmount_disk(identifier)
         self.setup_image(params['firmware']['name'], identifier)
-        self.clone_repositories(params)
-        self.mount_disk(identifier)
-        self.copy_files(params)
+        self.mount_image(identifier)
+        if 'repositories' in params:
+            self.copy_repositories(params, identifier, progress)
+        self.copy_files(params, identifier)
+        self.unmount_image(identifier)
 
         for command in self.command_queue:
             command.run(progress)
@@ -79,39 +85,128 @@ class DiskTarget(DeploymentTarget):
         self.command_queue.append(command)
 
     def setup_image(self, firmware, identifier):
-        self.queue_command(MessageCommand('Setting up image...'))
-        eval('self.' + CONFIG.OS + '_setup_image(firmware, identifier)')
+        if firmware:
+            self.queue_command(MessageCommand('Setting up image...'))
+            eval('self.' + CONFIG.OS + '_setup_image(firmware, identifier)')
 
     def Darwin_setup_image(self, firmware, identifier):
-        if firmware:
-            firmware_path = CONFIG.FIRMWARE_DIR + firmware
-            self.queue_command(BashCommand('dd if={} of=/dev/r{} bs=8m'.format(
-                firmware_path, identifier)))
+        self.queue_command(BashCommand('dd if={} of=/dev/r{} bs=8m'.format(
+            CONFIG.FIRMWARE_DIR + firmware, identifier)))
 
     def Linux_setup_image(self, firmware, identifier):
-        raise Exception('Linux_setup_image not implemented')
+        self.queue_command(BashCommand('dd if={} of=/dev/{} bs=8M'.format(
+            CONFIG.FIRMWARE_DIR + firmware, identifier)))
 
     def Windows_setup_image(self, firmware, identifier):
         raise Exception('Windows_setup_image not implemented')
 
-    def clone_repositories(self, params):
-        pass
+    def copy_repositories(self, params, identifier, progress):
+        self.queue_command(MessageCommand('Copying repositories...'))
+        eval('self.' + CONFIG.OS + '_copy_repositories(params, identifier, progress)')
 
-    def copy_files(self, params):
-        eval('self.' + CONFIG.OS + '_copy_files(params)')
+    def Linux_copy_repositories(self, params, identifier, progress):
+        repositories_manager = self.manager.repositories_manager
+
+        for repo in params['repositories']:
+            if repo['repo']['id'] in params['disabled_repo_ids']:
+                continue
+
+            name = repositories_manager.get_name_from_remote_path(repo['repo'])
+            MessageCommand('Updating repository {}'.format(name)).run(progress)
+            repositories_manager.fetch_repository(repo['repo'], name)
+
+            self.queue_command(BashCommand('cd {} && git checkout {}'.format(
+                os.path.join(CONFIG.REPOS_DIR, name), repo['commit'])))
+
+            local_path = os.path.join(
+                os.path.join(CONFIG.MOUNTING_DIR, identifier),
+                repo['repo']['local_path'])
+            self.queue_command(BashCommand('cp -r {} {}'.format(
+                os.path.join(CONFIG.REPOS_DIR, name), local_path)))
+
+    def copy_files(self, params, identifier):
+        self.queue_command(MessageCommand('Copying files...'))
+        eval('self.' + CONFIG.OS + '_copy_files(params, identifier)')
+
+    def Linux_copy_files(self, params, identifier):
+        arguments = {}
+        for param in params['params']:
+            arguments[param['parameter_name']] = param['parameter_value']
+
+        for file in params['files']:
+            target_filename = file['target_filename']
+            self.queue_command(MessageCommand('Copying file {}'.format(target_filename)))
+            if len(target_filename) > 0 and target_filename[0] == '/':
+                target_filename = target_filename[1:]
+            local_path = os.path.join(
+                os.path.join(CONFIG.MOUNTING_DIR, identifier), target_filename)
+
+            content = file['file_contents']
+            for kw in re.findall('\{\{(.+)\}\}', content):
+                content = content.replace('{{' + kw + '}}', str(arguments[kw]))
+            content = content.replace('\r\n', '\n')
+            self.queue_command(WriteFileCommand(local_path, content))
+            if file['is_executable']:
+                self.queue_command(BashCommand('chmod +x {}'.format(local_path)))
+
+        # write deployment info file
+        self.queue_command(WriteFileCommand(
+            os.path.join(os.path.join(CONFIG.MOUNTING_DIR, identifier),
+                'deployment_info.json'),
+                self.get_deployment_info(params)))
 
     def Darwin_copy_files(self, params):
-        pass
-        # raise Exception('Darwin_copy_files not implemented')
-
-    def Linux_copy_files(self, params):
-        raise Exception('Linux_copy_files not implemented')
+        raise Exception('Darwin_copy_files not implemented')
 
     def Windows_copy_files(self, params):
         raise Exception('Windows_copy_files not implemented')
 
-    def unmount_image(self, params):
-        pass
+    @staticmethod
+    def get_deployment_info(params):
+        return json.dumps({
+            'firmawre': params['firmware']['name'],
+            'config': params['dep']['config'],
+            'target': params['dep']['target'],
+            'date': params['dep']['date'],
+            'deployment': params['dep']['id'],
+            'comment': params['dep']['comment']
+        })
+
+    def mount_image(self, params):
+        eval('self.' + CONFIG.OS + '_mount_image(params)')
+
+    def Darwin_mount_image(self, identifier):
+        mounting_path = os.path.join(CONFIG.MOUNTING_DIR, identifier)
+        self.queue_command(BashCommand('rm -rf {}'.format(mounting_path)))
+        self.queue_command(BashCommand('mkdir {}'.format(mounting_path)))
+        self.queue_command(BashCommand('mount /dev/{}s2 {}'.format(identifier,
+            mounting_path)))
+
+    def Linux_mount_image(self, identifier):
+        mounting_path = os.path.join(CONFIG.MOUNTING_DIR, identifier)
+        self.queue_command(BashCommand('rm -rf {}'.format(mounting_path)))
+        self.queue_command(BashCommand('mkdir {}'.format(mounting_path)))
+        self.queue_command(BashCommand('mount /dev/{}2 {}'.format(identifier,
+            mounting_path)))
+
+    def Windows_mount_image(self, identifier):
+        raise Exception('Windows_mount_image not implemented')
+
+    def unmount_image(self, identifier):
+        self.queue_command(MessageCommand('Unmounting image...'))
+        eval('self.' + CONFIG.OS + '_unmount_image(identifier)')
+
+    def Darwin_unmount_image(self, identifier):
+        self.queue_command(BashCommand(''))
+
+    def Linux_unmount_image(self, identifier):
+        mounting_path = os.path.join(CONFIG.MOUNTING_DIR, identifier)
+        self.queue_command(BashCommand('sync'))
+        self.queue_command(BashCommand('umount {}'.format(mounting_path)))
+        self.queue_command(BashCommand('rm -rf {}'.format(mounting_path)))
+
+    def Windows_unmount_image(self, identifier):
+        raise Exception('Windows_unmount_image not implemented')
 
     def mount_disk(self, identifier):
         self.queue_command(MessageCommand(
@@ -138,7 +233,8 @@ class DiskTarget(DeploymentTarget):
             'diskutil unmountDisk /dev/{}'.format(identifier)))
 
     def Linux_unmount_disk(self, identifier):
-        raise Exception('Linux_unmount_disk not implemented')
+        self.queue_command(BashCommand(
+            'umount /dev/{}'.format(identifier)))
 
     def Windows_unmount_disk(self, identifier):
         raise Exception('Windows_unmount_disk not implemented')
@@ -175,11 +271,23 @@ class DiskTarget(DeploymentTarget):
         return disks
 
     @staticmethod
-    def Linux_get_disks_list(self):
-        print('Disk listing not implemented for Linux')
-        return []
+    def Linux_disk_is_external(disk):
+        return True
 
-    @staticmethod
-    def Windows_get_disks_list(self):
+    @classmethod
+    def Linux_get_disks_list(cls):
+        unfiltered = os.listdir('/dev')
+
+        # only keep files that match sd[a-z]$
+        r = re.compile(r'\Asd[a-z]$')
+        disks = []
+        for disk in unfiltered:
+            if r.match(disk) and cls.Linux_disk_is_external(disk):
+                disks.append(disk)
+
+        return disks
+
+    @classmethod
+    def Windows_get_disks_list(cls):
         print('Disk listing not implemented for Windows')
         return []

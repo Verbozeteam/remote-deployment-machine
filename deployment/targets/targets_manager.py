@@ -8,7 +8,7 @@ import json
 
 # TODO: Implement code to run on Windows and Linux as well - currently only Mac
 class TargetsManager(threading.Thread):
-    def __init__(self, communicator):
+    def __init__(self, repositories_manager, communicator):
         threading.Thread.__init__(self)
 
         self.target_types = [
@@ -18,6 +18,7 @@ class TargetsManager(threading.Thread):
         self.discovered_targets = {}
         self.last_sent_dump = []
         self.communicator = communicator
+        self.repositories_manager = repositories_manager
         self.running_deployments = []
         print('TargetsManager initialized')
 
