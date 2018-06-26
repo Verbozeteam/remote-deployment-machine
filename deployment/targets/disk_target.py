@@ -174,6 +174,7 @@ class DiskTarget(DeploymentTarget):
         })
 
     def mount_image(self, params):
+        self.queue_command(MessageCommand('Mounting image...'))
         eval('self.' + CONFIG.OS + '_mount_image(params)')
 
     def Darwin_mount_image(self, identifier):
