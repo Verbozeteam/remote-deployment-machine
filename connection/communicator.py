@@ -5,6 +5,7 @@ import getpass
 import websocket
 import requests
 import json
+import time
 
 from config.config import CONFIG
 from config.auth import AUTH_CONFIG
@@ -112,3 +113,13 @@ class Communicator:
     def websocket_close(self, ws):
         print('Disconnected from server')
         self.connected = False
+
+        def reconnect():
+            while not self.connected:
+                time.sleep(10)
+                print('Attempting to reconnect')
+                self.initialize_websocket()
+
+        thread = threading.Thread(target=reconnect)
+        thread.start()
+        thread.join()
