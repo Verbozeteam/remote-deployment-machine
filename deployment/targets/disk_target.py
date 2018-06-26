@@ -118,9 +118,9 @@ class DiskTarget(DeploymentTarget):
             self.queue_command(BashCommand('cd {} && git checkout {}'.format(
                 os.path.join(CONFIG.REPOS_DIR, name), repo['commit'])))
 
-            local_path = os.path.join(
+            local_path = os.path.join(os.path.join(
                 os.path.join(CONFIG.MOUNTING_DIR, identifier),
-                repo['repo']['local_path'])
+                repo['repo']['local_path']), name)
             self.queue_command(BashCommand('cp -r {} {}'.format(
                 os.path.join(CONFIG.REPOS_DIR, name), local_path)))
 
@@ -150,6 +150,7 @@ class DiskTarget(DeploymentTarget):
                 self.queue_command(BashCommand('chmod +x {}'.format(local_path)))
 
         # write deployment info file
+        self.queue_command(MessageCommand('Writing deployment info file'))
         self.queue_command(WriteFileCommand(
             os.path.join(os.path.join(CONFIG.MOUNTING_DIR, identifier),
                 'deployment_info.json'),
