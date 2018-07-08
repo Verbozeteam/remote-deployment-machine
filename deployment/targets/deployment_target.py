@@ -70,12 +70,23 @@ class DeploymentThread(threading.Thread):
         self.target = target
         self.params = params
 
+    def unmount_image_on_error(self):
+        self.target.reset_commands()
+        identifier = self.params['deployment_target']['identifier']
+        self.target.unmount_image(identifier)
+        for command in self.target.command_queue:
+            command.run(self.target.progress)
+        self.target.image_mounted = False
+
+
     def run(self):
         print('DeploymentThread running')
         try:
             self.target.deploy_impl(self.params, self.target.progress)
         except Exception as e:
             self.target.progress.exception(e)
+            if self.target.image_mounted:
+                self.unmount_image_on_error()
         finally:
             print('DeploymentThread completed')
             self.target.clean_after_deploy()

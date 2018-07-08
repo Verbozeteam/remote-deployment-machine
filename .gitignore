@@ -109,3 +109,9 @@ venv.bak/
 .mypy_cache/
 
 .vscode
+
+# repositories directory
+repositories/
+
+# firmwares directory
+firmwares/

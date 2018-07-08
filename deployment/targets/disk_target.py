@@ -88,6 +88,7 @@ class DiskTarget(DeploymentTarget):
 
         print('DiskTarget initialized')
         self.command_queue = []
+        self.image_mounted = False
 
     @classmethod
     def list_all_target_identifiers(cls):
@@ -98,7 +99,6 @@ class DiskTarget(DeploymentTarget):
 
     def deploy_impl(self, params, progress):
         self.reset_commands()
-
         identifier = params['deployment_target']['identifier']
         # self.unmount_disk(identifier)
         self.setup_image(params['firmware']['name'], identifier)
@@ -110,11 +110,15 @@ class DiskTarget(DeploymentTarget):
 
         for command in self.command_queue:
             command.run(progress)
+            if isinstance(command, BashCommand) and 'mount ' in command.command:
+                self.image_mounted = True
+            elif isinstance(command, BashCommand) and 'unmout ' in command.command:
+                self.image_mounted = False
 
-        progress.record('~==~DEPLOYMENT COMPLETED SUCCESSFULLY')
+        progress.record('~==~DEPLOYMENT COMPLETED SUCCESSFULLY', 'COMPLETED')
 
     def reset_commands(self):
-        command_queue = []
+        self.command_queue = []
 
     def queue_command(self, command):
         self.command_queue.append(command)
@@ -156,6 +160,7 @@ class DiskTarget(DeploymentTarget):
             local_path = os.path.join(os.path.join(
                 os.path.join(CONFIG.MOUNTING_DIR, identifier),
                 repo['repo']['local_path']), name)
+            self.queue_command(BashCommand('pwd'))
             self.queue_command(BashCommand('cp -r {} {}'.format(
                 os.path.join(CONFIG.REPOS_DIR, name), local_path)))
 
