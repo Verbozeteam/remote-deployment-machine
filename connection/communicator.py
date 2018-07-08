@@ -43,20 +43,24 @@ class Communicator:
                 url = 'http://'
             else:
                 url = 'https://'
-            url += CONFIG.BASE_URL + '/api/token-auth/'
+            url += CONFIG.BASE_URL + '/api/tokens/'
 
             r = requests.post(url, auth_info)
 
             if r.status_code != requests.codes['ok']:
+                error_data = r.json()
+                if error_data['error'] == 'Machine already logged in':
+                    print(error_data['error'])
+                    sys.exit(0)
                 print('Authentication error - try again (status {})'.format(r.status_code))
                 continue
 
-            elif not 'rdm_ws_token' in r.json():
+            elif not 'id' in r.json():
                 print('You do not have the right permissions to use this tool')
                 break
 
             else:
-                self.token = r.json()['rdm_ws_token']
+                self.token = r.json()['id']
                 break
         if not self.token:
             print ('Failed to authenticate')
