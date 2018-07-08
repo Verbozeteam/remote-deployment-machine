@@ -35,8 +35,8 @@ class WriteFileCommand(Command):
 
     def run(self, progress):
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        with open(self.path, 'wb') as F:
-            F.write(self.content.encode('utf-8'))
+        with open(self.path, 'wb') as f:
+            f.write(self.content.encode('utf-8'))
 
 class MessageCommand(Command):
     def __init__(self, message):
@@ -44,6 +44,41 @@ class MessageCommand(Command):
 
     def run(self, progress):
         progress.record('~==~ACTION: {}\n'.format(self.message))
+
+class UpdateJson(Command):
+    def __init__(self, file, dump):
+        self.file = file
+        self.dump = dump
+
+    def run(self, progress):
+        existing_dump = {}
+        if os.path.exists(self.file):
+            with open(self.file) as f:
+                existing_dump = json.load(f)
+
+        dump = self.merge_dictionaries(existing_dump, self.dump)
+
+        os.makedirs(os.path.dirname(self.file), exist_ok=True)
+        with open(self.file, 'wb') as f:
+            f.write(json.dumps(dump, indent=4))
+
+    @staticmethod
+    def merge_dictionaries(original, new):
+        modified = {}
+        for key in original:
+            if key not in new:
+                modified[key] = original[key]
+            else:
+                if isinstance(original[key], dict):
+                    modified[key] = self.merge_dictionary(original[key], new[key])
+                else:
+                    modified[key] = new[key]
+
+        for key in new:
+            if key not in modified:
+                modified[key] = new[key]
+
+        return modified
 
 class DiskTarget(DeploymentTarget):
     def __init__(self, manager, identifier, communicator):
@@ -151,10 +186,9 @@ class DiskTarget(DeploymentTarget):
 
         # write deployment info file
         self.queue_command(MessageCommand('Writing deployment info file'))
-        self.queue_command(WriteFileCommand(
+        self.queue_command(UpdateJson(
             os.path.join(os.path.join(CONFIG.MOUNTING_DIR, identifier),
-                'deployment_info.json'),
-                self.get_deployment_info(params)))
+                'deployment_info.json'), self.get_deployment_info(params)))
 
     def Darwin_copy_files(self, params):
         raise Exception('Darwin_copy_files not implemented')
@@ -164,14 +198,16 @@ class DiskTarget(DeploymentTarget):
 
     @staticmethod
     def get_deployment_info(params):
-        return json.dumps({
+        return {
             'firmawre': params['firmware']['name'],
+            'repositories': params['repositories'],
+            'files': params['files'],
             'config': params['dep']['config'],
             'target': params['dep']['target'],
             'date': params['dep']['date'],
             'deployment': params['dep']['id'],
             'comment': params['dep']['comment']
-        })
+        }
 
     def mount_image(self, params):
         self.queue_command(MessageCommand('Mounting image...'))
