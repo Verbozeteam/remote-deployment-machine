@@ -72,7 +72,6 @@ class DeploymentThread(threading.Thread):
 
     def unmount_image_on_error(self):
         self.target.reset_commands()
-        self.target.queue_command(self.target.MessageCommand('Unmounting image afer exception...'))
         self.target.unmount_image()
         for command in self.target.command_queue:
             command.run(self.target.progress)

@@ -157,6 +157,7 @@ class DiskTarget(DeploymentTarget):
 
     def reset_commands(self):
         self.command_queue = []
+        self.message_counter = 1
 
     def queue_command(self, command):
         self.command_queue.append(command)
@@ -198,7 +199,6 @@ class DiskTarget(DeploymentTarget):
 
             self.queue_command(MessageCommand('Copying repository {}...'.format(name)))
             self.queue_command(BashCommand(git_checkout_command))
-            self.queue_command(BashCommand('pwd'))
             self.queue_command(WriteFileCommand(local_path, None))
             self.queue_command(BashCommand(copy_command))
 
@@ -249,6 +249,6 @@ class DiskTarget(DeploymentTarget):
     def unmount_image(self):
         self.queue_command(MessageCommand('Unmounting image...'))
         self.queue_command(BashCommand('sync'))
-        self.queue_command(BashCommand('umount {}'.format(
+        self.queue_command(BashCommand('umount -l {}'.format(
             self.mounting_point), caused_unmount=True))
         self.queue_command(BashCommand('rm -rf {}'.format(self.mounting_point)))
