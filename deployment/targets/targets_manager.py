@@ -6,7 +6,6 @@ import threading
 from time import sleep
 import json
 
-# TODO: Implement code to run on Windows and Linux as well - currently only Mac
 class TargetsManager(threading.Thread):
     def __init__(self, repositories_manager, communicator):
         threading.Thread.__init__(self)
@@ -42,12 +41,10 @@ class TargetsManager(threading.Thread):
                     target_type.list_all_target_identifiers()))
             current_all_targets_ids = list(map(lambda T: T[1], current_all_targets))
 
-
-            # FIXME: RuntimeError: dictionary changed size during iteration
-            # FIXME: This happens when SD card is removed
-
             # check if any targets don't exist anymore
-            for target in self.discovered_targets.keys():
+            for target in list(self.discovered_targets):
+            # list(self.discovered_targets) returns copy of list of keys,
+            # prevents RuntimeError: dictionary changed size during iteration
                 if target not in current_all_targets_ids:
                     # target has been removed
                     self.discovered_targets[target].on_removed()
