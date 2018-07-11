@@ -19,7 +19,7 @@ class RepositoriesManager:
     def update_repositories_list(self, repos):
         print('Updating repositories list')
         self.repositories = repos
-        self.fetch_repositores()
+        # self.fetch_repositores()
 
     @staticmethod
     def get_name_from_remote_path(repo):

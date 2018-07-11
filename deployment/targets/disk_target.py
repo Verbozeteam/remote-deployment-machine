@@ -7,6 +7,9 @@ import os
 import platform
 import subprocess
 
+def join_path(p1, p2):
+    return os.path.join(p1, p2.strip('/'))
+
 class Command(object):
     def run(self, progress):
         pass
@@ -102,7 +105,7 @@ class DiskTarget(DeploymentTarget):
 
         self.identifier = identifier
         self.command_queue = []
-        self.mounting_point = os.path.join(CONFIG.MOUNTING_DIR, identifier)
+        self.mounting_point = join_path(CONFIG.MOUNTING_DIR, identifier)
         self.image_mounted = os.path.exists(self.mounting_point)
         self.message_counter = 1
 
@@ -137,6 +140,7 @@ class DiskTarget(DeploymentTarget):
         self.setup_image(params['firmware']['name'])
         self.mount_image()
         self.copy_repositories(params, progress)
+        self.run_build_options(params)
         self.copy_files(params)
         self.unmount_image()
 
@@ -167,7 +171,7 @@ class DiskTarget(DeploymentTarget):
             self.queue_command(MessageCommand('Setting up image...'))
 
             dd_command = 'dd if={} of=/dev/{} bs=10M'.format(
-                os.path.join(CONFIG.FIRMWARE_DIR, firmware),
+                join_path(CONFIG.FIRMWARE_DIR, firmware),
                 self.identifier)
             self.queue_command(BashCommand(dd_command))
 
@@ -190,17 +194,36 @@ class DiskTarget(DeploymentTarget):
             self.message_counter += 1
             repositories_manager.fetch_repository(repo['repo'], name)
 
-            repository_path = os.path.join(CONFIG.REPOS_DIR, name)
+            repository_path = join_path(CONFIG.REPOS_DIR, name)
+            repository_files_expr = join_path(repository_path, '*')
             git_checkout_command = 'cd {} && git checkout {}'.format(
                 repository_path, repo['commit'])
-            local_path = os.path.join(self.mounting_point,
-                os.path.join(repo['repo']['local_path'], name))
-            copy_command = 'cp -r {} {}'.format(repository_path, local_path)
+            local_path = join_path(self.mounting_point, repo['repo']['local_path'])
+            copy_command = 'cp -r {} {}'.format(repository_files_expr, local_path)
 
             self.queue_command(MessageCommand('Copying repository {}...'.format(name)))
             self.queue_command(BashCommand(git_checkout_command))
             self.queue_command(WriteFileCommand(local_path, None))
             self.queue_command(BashCommand(copy_command))
+
+    def get_repository_from_id(self, params, repo_id):
+        for repo in params['repositories']:
+            if repo['repo']['id'] == repo_id:
+                return repo['repo']
+        return {}
+
+    def run_build_options(self, params):
+        # make a dictionary of repo_id -> list of options for that repo
+        options = {}
+        for option in params['options']:
+            if option['repo'] in options: options[option['repo']].append(option)
+            else:                         options[option['repo']] = [option]
+        for repo_id in options.keys():
+            repo_options = sorted(options[repo_id], key=lambda o: o['option_priority'])
+            repo_local_mounted_path = join_path(self.mounting_point, self.get_repository_from_id(params, repo_id)['local_path'])
+            for option in repo_options:
+                self.queue_command(MessageCommand('Running build option {}: {}'.format(option['option_name'], option['option_command'])))
+                self.queue_command(BashCommand("cd {} && {}".format(repo_local_mounted_path, option['option_command'])))
 
     def copy_files(self, params):
         arguments = {}
@@ -213,7 +236,7 @@ class DiskTarget(DeploymentTarget):
 
             if len(target_filename) > 0 and target_filename[0] == '/':
                 target_filename = target_filename[1:]
-            local_path = os.path.join(self.mounting_point, target_filename)
+            local_path = join_path(self.mounting_point, target_filename)
 
             content = f['file_contents']
             for kw in re.findall('\{\{(.+)\}\}', content):
@@ -226,7 +249,7 @@ class DiskTarget(DeploymentTarget):
 
         # write deployment info file
         self.queue_command(MessageCommand('Writing deployment info file...'))
-        deployment_file = os.path.join(self.mounting_point, 'deployment_info.json')
+        deployment_file = join_path(self.mounting_point, 'deployment_info.json')
         self.queue_command(UpdateJsonCommand(deployment_file, self.get_deployment_info(params)))
 
     @staticmethod
