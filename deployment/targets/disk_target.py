@@ -45,11 +45,12 @@ class WriteFileCommand(Command):
         self.content = content
 
     def run(self, progress):
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-
-        if self.content:
+        if self.content != None:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
             with open(self.path, 'wb') as f:
                 f.write(self.content.encode('utf-8'))
+        else:
+            os.makedirs(self.path, exist_ok=True)
 
 
 class MessageCommand(Command):
