@@ -70,7 +70,11 @@ class UpdateJsonCommand(Command):
         existing_content = {}
         if os.path.exists(self.file):
             with open(self.file, 'r') as f:
-                existing_content = json.load(f)
+                try:
+                    existing_content = json.load(f)
+                except:
+                    existing_content = {}
+                    progress.record('~==~Failed to read corrupted file {}\n'.format(self.file))
 
         content = self.merge_dictionaries(existing_content, self.content)
 
