@@ -30,7 +30,7 @@ class RepositoriesManager:
         if os.path.isdir(os.path.join(self.directory, name)):
             os.system('cd {} && cd {} && {}'.format(self.directory, name, fetch_all_branches))
         else:
-            os.system('cd {} && git clone {} && cd {} && {}'.format(self.directory, repo['remote_path'], name, fetch_all_branches))
+            os.system('cd {} && eval \"$(ssh-agent -s)\" && ssh-add /home/pi/.ssh/id_rsa && git clone {} && sudo killall ssh-agent && cd {} && {}'.format(self.directory, repo['remote_path'], name, fetch_all_branches))
 
     def fetch_repositores(self):
         for repo in self.repositories:
