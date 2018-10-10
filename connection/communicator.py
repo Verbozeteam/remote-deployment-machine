@@ -30,7 +30,8 @@ class Communicator:
             auth_info = {
                 'username': AUTH_CONFIG.USERNAME,
                 'password': AUTH_CONFIG.PASSWORD,
-                'machine': self.get_machine_info()
+                'machine': self.get_machine_info(),
+                'requested_token_type': 'admin_user'
             }
             if auth_info['username'] == '':
                 auth_info['username'] = input('Username: ')
